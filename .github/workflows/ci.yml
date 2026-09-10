@@ -46,6 +46,13 @@ jobs:
     needs: quality
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      # Resolve the tracking URI once for this job. If the
+      # MLFLOW_TRACKING_URI secret isn't configured (local/dev fallback),
+      # use a local sqlite store so `--tracking-uri` always receives a value
+      # (an empty secret previously crashed `argparse` with exit 2) and so
+      # both `train` and `export` target the same store.
+      MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI || 'sqlite:////tmp/mlflow.db' }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -61,9 +68,9 @@ jobs:
           uv run --package pipelines python -m pipelines.train \
             --alpha 1.0 \
             --allow-fallback \
-            --tracking-uri ${{ secrets.MLFLOW_TRACKING_URI }}
+            --tracking-uri "${{ env.MLFLOW_TRACKING_URI }}"
       - name: Export signed model artifact for serving image
-        run: uv run --package pipelines python -m pipelines.export --out artifacts
+        run: uv run --package pipelines python -m pipelines.export --tracking-uri "${{ env.MLFLOW_TRACKING_URI }}" --out artifacts
       - uses: actions/upload-artifact@v4
         with:
           name: model-artifact
