@@ -1,0 +1,112 @@
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  UV_VERSION: "0.9.5"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies (frozen lockfile)
+        run: uv sync --frozen --all-packages
+      - name: Lint (ruff)
+        run: uv run ruff check .
+      - name: Lint (ruff format check)
+        run: uv run ruff format --check .
+      - name: Type check (mypy, strict)
+        run: uv run mypy libs apps
+      - name: Dependency vulnerability scan (pip-audit)
+        run: uv tool run pip-audit --skip-editable
+      - name: Tests (with coverage)
+        run: uv run pytest --cov --cov-fail-under=70
+
+  train-and-export:
+    needs: quality
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: uv sync --frozen --package pipelines
+      - name: Train and log to MLflow (quality-gated)
+        run: |
+          uv run --package pipelines python -m pipelines.train \
+            --alpha 1.0 \
+            --allow-fallback \
+            --tracking-uri ${{ secrets.MLFLOW_TRACKING_URI }}
+      - name: Export signed model artifact for serving image
+        run: uv run --package pipelines python -m pipelines.export --out artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: model-artifact
+          path: artifacts/
+          retention-days: 30
+
+  docker-build:
+    needs: train-and-export
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: model-artifact
+          path: artifacts
+      - uses: docker/setup-buildx-action@v3
+      - name: Build serving image (multi-stage, non-root)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infrastructure/Dockerfile
+          load: true
+          push: false
+          tags: ml-platform/api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke-test image (non-root, healthy, serving)
+        run: |
+          docker run -d --name smoke -p 8000:8000 \
+            -v "$PWD/artifacts:/models:ro" \
+            -e MODEL_ARTIFACT_PATH=/models/latest/pipeline.skops \
+            ml-platform/api:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/ready > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/ready | grep -q '"status":"ok"'
+          curl -fsS -X POST http://127.0.0.1:8000/predict \
+            -H 'Content-Type: application/json' \
+            -d '{"records":[{"med_inc":8.3,"house_age":41.0,"avg_occupancy":6.98}]}' \
+            | grep -q '"count":1'
+          test "$(docker inspect -f '{{.Config.User}}' ml-platform/api:ci)" = "10001:10001"
+          docker rm -f smoke
+      - name: Push (main only)
+        if: github.ref == 'refs/heads/main'
+        run: echo "docker push ghcr.io/${{ github.repository }}/api:${{ github.sha }}"

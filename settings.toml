@@ -1,0 +1,9 @@
+[default]
+log_level = "info"
+service_name = "ml-platform"
+
+[development]
+tracking_uri = "http://localhost:5000"
+
+[production]
+tracking_uri = "https://mlflow.internal.example.com"

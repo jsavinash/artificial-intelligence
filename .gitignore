@@ -1,0 +1,137 @@
+# ============================================================================
+# Python
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+wheels/
+*.egg-info/
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# ============================================================================
+# Package & dependency managers
+# ============================================================================
+# uv.lock IS committed (reproducibility) — only transient uv state is ignored
+.uv/
+uv-cache/
+pip-log.txt
+pip-delete-this-directory.txt
+poetry.lock.bak
+
+# ============================================================================
+# Testing & quality tooling
+# ============================================================================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+*.cover
+
+# ============================================================================
+# ML / experiment artifacts (never commit models or tracking stores)
+# ============================================================================
+artifacts/
+mlruns/
+mlartifacts/
+*.skops
+*.pkl
+*.joblib
+*.h5
+*.onnx
+*.pt
+*.pth
+models/
+*.mlflow.db
+mlflow.db
+
+# ============================================================================
+# Data (keep large/derived data out of git)
+# ============================================================================
+data/
+*.csv
+*.parquet
+*.arrow
+*.feather
+*.h5
+*.sqlite
+*.db
+!tests/fixtures/*.csv
+
+# ============================================================================
+# Environment & secrets
+# ============================================================================
+.env
+.env.*
+*.env
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# ============================================================================
+# Jupyter
+# ============================================================================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ============================================================================
+# IDEs & editors
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.sublime-project
+*.sublime-workspace
+
+# ============================================================================
+# Operating systems
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================================
+# Docker
+# ============================================================================
+docker-compose.override.yml
+.docker/
+
+# ============================================================================
+# Logs & temporary files
+# ============================================================================
+*.log
+logs/
+nohup.out
+*.tmp
+*.bak
+*.orig
+*.rej

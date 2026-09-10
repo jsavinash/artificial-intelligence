@@ -1,0 +1,62 @@
+[project]
+name = "ml-platform"
+version = "1.0.0"
+description = "Enterprise MLOps monorepo for supervised regression serving."
+requires-python = ">=3.12,<3.13"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+]
+
+[tool.uv.workspace]
+members = ["libs/*", "apps/*"]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+common-lib = { workspace = true }
+pipelines = { workspace = true }
+api = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "TC"]
+ignore = ["TC002", "TC003"]  # runtime-typed attrs (numpy/sklearn) read better top-level
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "dynaconf.*",
+    "sklearn.*",
+    "skops.*",
+    "mlflow.*",
+    "prometheus_fastapi_instrumentator.*",
+    "prometheus_client.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "libs/*/tests", "apps/*/tests"]
+addopts = "-q"
+filterwarnings = [
+    "error",
+    # Upstream (starlette testclient -> anyio); remove when starlette updates.
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated:DeprecationWarning",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
