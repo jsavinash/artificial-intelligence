@@ -171,3 +171,12 @@ tiny synthetic artifact (built in `conftest.py`) — covering the full load →
 verify → warmup → serve path. One documented upstream ignore remains in
 `filterwarnings` (starlette's anyio deprecation); remove it when starlette
 updates.
+## Documentation
+
+- **Architecture & design (principal architect docs):**
+  [`docs/architecture/`](docs/architecture/README.md) — system context, HLD
+  (C4), sequence flows, data contracts, ADRs, and the production-readiness
+  assessment.
+- **Operations:** [`docs/operations/`](docs/operations/README.md) —
+  observability, runbook, deployment.
+- Start at [`docs/architecture/README.md`](docs/architecture/README.md).
